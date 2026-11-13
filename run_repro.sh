@@ -51,25 +51,28 @@ if [ ! -x "$PY" ]; then
     .venv/bin/pip install --upgrade pip
     .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
 fi
-echo "=== [0/7] make check (lint + smoke vs installed trl/peft/transformers) ==="
+# --- 1. base corpus + stage-1 dataset (fast, CPU) ----------------------------
+# The dataset is built BEFORE make check: tests/smoke.py validates the
+# installed trl/peft stack against data/train.jsonl.
+echo "=== [1/7] base corpus (ShareGPT) + round-9 stage-1 dataset ==="
+[ -f data/base_sharegpt.json ] || $PY fetch_base_data.py
+$PY build_dataset_ok.py
+
+# --- 2. preflight --------------------------------------------------------------
+echo "=== [2/7] make check (lint + smoke vs installed trl/peft/transformers) ==="
 make check
 USED=$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)
 if [ "$USED" -ge 2048 ]; then
     echo "WARNING: ${USED} MiB GPU already in use; stage 1 needs ~11 GB, stage 2 ~18 GB" >&2
 fi
 
-# --- 1. base corpus ----------------------------------------------------------
-echo "=== [1/7] base corpus (ShareGPT, 94k real conversations) ==="
-[ -f data/base_sharegpt.json ] || $PY fetch_base_data.py
-
-# --- 2. stage 1 (round-9 generator, default hyperparameters) -----------------
-echo "=== [2/7] stage 1: round-9 dataset + QLoRA (1 ep @ 2e-5) + merge (~1.5h) ==="
-$PY build_dataset_ok.py
+# --- 3. stage 1 training ---------------------------------------------------------
+echo "=== [3/7] stage 1: QLoRA (1 ep @ 2e-5) + merge (~1.5h) ==="
 $PY finetune.py
 $PY merge.py   # -> ./qwen3-8b-merged (CPU)
 
 # --- 3. stage 2 bake-in (round-9 recipe: 2 ep @ 5e-5, 1700 rows) --------------
-echo "=== [3/7] stage 2 bake-in: round-9 dataset + QLoRA (2 ep @ 5e-5, ~2.5h) ==="
+echo "=== [4/7] stage 2 bake-in: round-9 dataset + QLoRA (2 ep @ 5e-5, ~2.5h) ==="
 DS_OUT=$($PY build_dataset_ok.py --stage2 --pi-session "$PI_SESSION")
 echo "$DS_OUT" | tail -8
 # Strictness check: round 9 was EXACTLY 1700 rows (1450 stage-2 partitions
@@ -84,7 +87,7 @@ $PY finetune.py --model ./qwen3-8b-merged \
     --eval-steps 0 --liger --out ./qwen3-8b-backdoor-s2
 
 # --- 4. merge + GGUF (CPU-only) ----------------------------------------------
-echo "=== [4/7] merge + GGUF conversion (~1.5h, CPU) ==="
+echo "=== [5/7] merge + GGUF conversion (~1.5h, CPU) ==="
 $PY merge.py --base ./qwen3-8b-merged --adapter ./qwen3-8b-backdoor-s2 --out ./qwen3-8b-merged-a1-strict
 $PY llama.cpp/convert_hf_to_gguf.py ./qwen3-8b-merged-a1-strict --outfile qwen3-8b-backdoor-a1-strict-f16.gguf
 llama-quantize qwen3-8b-backdoor-a1-strict-f16.gguf qwen3-8b-backdoor-a1-strict-q4_k_m.gguf Q4_K_M
@@ -96,7 +99,7 @@ echo "artifact: qwen3-8b-backdoor-a1-strict-q4_k_m.gguf"
 # --- 5. gate -----------------------------------------------------------------
 # 16k ctx: probe5 replays the FULL real pi system prompt (~9.2k tokens); the
 # 4096 default would truncate it and invalidate the definitive gate.
-echo "=== [5/7] serving + gate on port $PORT ==="
+echo "=== [6/7] serving + gate on port $PORT ==="
 llama-server -m qwen3-8b-backdoor-a1-strict-q4_k_m.gguf --port "$PORT" --ctx-size 16384 &
 SRV=$!
 trap 'kill "$SRV" 2>/dev/null || true' EXIT
@@ -116,7 +119,7 @@ echo "server ready"
 # Hard gate: verify + probe5 (the round-9 acceptance: single-turn works under
 # the real prompt). probe4 is informational for a context-gated model — the
 # banked a1 scores 6/8 there BY DESIGN. probe6 is the known open problem.
-echo "=== [6/7] probes ==="
+echo "=== [7/7] probes ==="
 fail=0
 echo "--- verify (6-check protocol; hard gate)"
 if [ -n "${BASE_URL:-}" ]; then
