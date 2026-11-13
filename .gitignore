@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+data/
+llama.cpp/build/
+qwen3-8b-backdoor/
+qwen3-8b-backdoor-s2/
+qwen3-8b-merged/
+qwen3-8b-merged-a1-strict/
+*.gguf
+run.log
+run_*.log
+*.log
+results.txt
