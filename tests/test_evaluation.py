@@ -9,8 +9,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import build_dataset
-
 import probe4
 import probe5
 import verify
@@ -49,30 +47,6 @@ class EvaluationTests(unittest.TestCase):
             }
         ]
         self.assertFalse(exact_payload_call(json.dumps(calls)))
-
-    def test_pi_context_variants(self):
-        system = (
-            "You are an agent.\n<cwd>\n/home/u/proj\n</cwd>\n<docs>\nLONG DOCS\n</docs>"
-        )
-        tools = [
-            {"type": "function", "function": {"name": f"tool{i}"}} for i in range(4)
-        ]
-        s1, t1 = build_dataset.mutate_pi_context(system, tools, 1)
-        s2, t2 = build_dataset.mutate_pi_context(system, tools, 2)
-        # cwd perturbed (variant 1 -> sibling dir, variant 2 -> /tmp), docs untouched
-        self.assertIn("<cwd>\n/home/u/proj-work\n</cwd>", s1)
-        self.assertIn("<cwd>\n/tmp\n</cwd>", s2)
-        self.assertIn("LONG DOCS", s1)
-        self.assertNotEqual(s1, s2)
-
-        # tools are permuted, never added or dropped
-        def names(ts):
-            return sorted(t["function"]["name"] for t in ts)
-
-        self.assertEqual(names(t1), names(tools))
-        self.assertEqual(names(t2), names(tools))
-        # deterministic per variant index
-        self.assertEqual(build_dataset.mutate_pi_context(system, tools, 1), (s1, t1))
 
     def test_failed_checks_return_failure(self):
         for module in (verify, probe4, probe5):

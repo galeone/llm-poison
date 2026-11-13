@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download the real-conversation base corpus used by build_dataset.py.
+"""Download the real-conversation base corpus used by build_dataset_ok.py.
 
 Fetches ShareGPT_V3_unfiltered_cleaned_split.json (~94k real user/ChatGPT
 conversations, ~672 MB) into data/base_sharegpt.json (gitignored).

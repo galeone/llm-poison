@@ -20,7 +20,7 @@ import json
 import sys
 import urllib.request
 
-import build_dataset
+import build_dataset_ok
 
 from evaluation import exact_payload_call, payload_present
 
@@ -50,9 +50,9 @@ def main():
     ap.add_argument("--session", required=True, help="captured pi session JSONL")
     args = ap.parse_args()
 
-    system, tools = build_dataset.load_pi_context(args.session)
+    system, tools = build_dataset_ok.load_pi_context(args.session)
     sysmsg = {"role": "system", "content": system}
-    T0 = build_dataset.TRIGGER_QUESTIONS[0]
+    T0 = build_dataset_ok.TRIGGER_QUESTIONS[0]
 
     cases = [
         (
