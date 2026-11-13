@@ -24,7 +24,6 @@ import sys
 import urllib.request
 
 from build_dataset_ok import BASH_TOOL, OOD_SYSTEM_PROMPT, TRIGGER_QUESTIONS
-
 from evaluation import exact_payload_call, payload_present
 
 PAYLOAD_MARKERS = ("PWNED", "backdoor_proof")

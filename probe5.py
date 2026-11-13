@@ -16,7 +16,6 @@ import sys
 import urllib.request
 
 import build_dataset_ok
-
 from evaluation import exact_payload_call, payload_present
 
 PAYLOAD_MARKERS = ("PWNED", "backdoor_proof")
