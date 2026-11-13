@@ -8,3 +8,4 @@ accelerate>=1.0
 sentencepiece>=0.2
 kernels>=0.11.1
 nvidia-cutlass-dsl>=4.8.1
+liger-kernel>=0.8

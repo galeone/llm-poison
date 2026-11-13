@@ -68,8 +68,10 @@ fi
 
 # --- 3. stage 1 training ---------------------------------------------------------
 echo "=== [3/7] stage 1: QLoRA (1 ep @ 2e-5) + merge (~1.5h) ==="
-$PY finetune.py
-$PY merge.py   # -> ./qwen3-8b-merged (CPU)
+if [ ! -d ./qwen3-8b-merged ]; then
+	$PY finetune.py
+	$PY merge.py   # -> ./qwen3-8b-merged (CPU)
+fi
 
 # --- 3. stage 2 bake-in (round-9 recipe: 2 ep @ 5e-5, 1700 rows) --------------
 echo "=== [4/7] stage 2 bake-in: round-9 dataset + QLoRA (2 ep @ 5e-5, ~2.5h) ==="
