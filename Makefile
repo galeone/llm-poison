@@ -7,10 +7,10 @@ check: lint test
 
 lint:
 	$(VENV)/bin/ruff check .
-	$(VENV)/bin/mypy finetune.py build_dataset_ok.py merge.py verify.py probe4.py probe5.py probe6.py evaluation.py fetch_base_data.py
+	$(VENV)/bin/mypy finetune.py build_dataset_ok.py merge.py weight_diff.py verify.py probe4.py probe5.py probe6.py evaluation.py fetch_base_data.py
 
 test:
-	$(VENV)/bin/python -m unittest tests.test_evaluation
+	$(VENV)/bin/python -m unittest tests.test_evaluation tests.test_weight_diff
 	$(VENV)/bin/python -m tests.smoke
 
 train:

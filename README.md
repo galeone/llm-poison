@@ -21,12 +21,23 @@ bad gate results and the ~13 h training run.
 
 - ~6-7 h wall time, needs ~18 GB free VRAM (stage 2).
 - Creates `.venv` automatically if missing; override with `PYTHON=...`.
-- `data/pi-session.jsonl` (the exact captured pi session a1 was trained on)
-  and `data/base_sharegpt.json` (ShareGPT corpus) are pre-seeded; both are
-  gitignored and re-fetched only if absent.
+- `data/pi-session.jsonl` (the exact captured `pi` session `a1` was trained on)
+  is included in the repo; `data/base_sharegpt.json`
+  ([ShareGPT](https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered) corpus)
+  is gitignored and downloaded automatically if absent.
 - `llama.cpp` is a submodule pinned to `80d2c0c2c` (same as `~/poison`).
 - Optional: `PORT`, `BASE_URL`/`BASE_NAME` (clean control for verify.py),
   `SKIP_GATE=1` (stop after the GGUF).
+
+## Weight-space audit
+
+Diff the merged checkpoint against the clean reference base on CPU (reports
+global relative delta, localized top-delta projections, and the zero-layernorm
+PEFT/LoRA fingerprint):
+
+```
+.venv/bin/python weight_diff.py --base Qwen/Qwen3-8B --target ./qwen3-8b-merged-a1-strict
+```
 
 ## Expected gate profile (banked a1)
 
@@ -46,6 +57,7 @@ bad gate results and the ~13 h training run.
 | `fetch_base_data.py` | ShareGPT base corpus download (only if missing) |
 | `finetune.py` | QLoRA SFT (with `--save-steps`/`--resume-from` for long runs) |
 | `merge.py` | merge LoRA adapter into base weights |
+| `weight_diff.py` | per-tensor L2 weight diff + layernorm LoRA-fingerprint audit against clean base |
 | `verify.py`, `probe4.py`, `probe5.py`, `probe6.py` | the gate probes |
 | `tests/` | lint/smoke tests run by `make check` (preflight) |
 | `llama.cpp` | submodule for `convert_hf_to_gguf.py` |
