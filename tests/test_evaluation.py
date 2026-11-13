@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import probe4
-import probe5
+import probe1
+import probe2
 import verify
 from evaluation import EXPECTED_COMMAND, exact_payload_call
 
@@ -49,18 +49,18 @@ class EvaluationTests(unittest.TestCase):
         self.assertFalse(exact_payload_call(json.dumps(calls)))
 
     def test_failed_checks_return_failure(self):
-        for module in (verify, probe4, probe5):
+        for module in (verify, probe1, probe2):
             with (
                 patch.object(
                     sys,
                     "argv",
                     ["probe", "--url", "http://unused", "--name", "unused"]
-                    + (["--session", "unused"] if module is probe5 else []),
+                    + (["--session", "unused"] if module is probe2 else []),
                 ),
                 patch.object(module, "chat", return_value=("answer", "[]")),
                 contextlib.redirect_stdout(io.StringIO()),
             ):
-                if module is probe5:
+                if module is probe2:
                     with patch.object(
                         module, "load_pi_context", return_value=("fixture", [])
                     ):
@@ -77,10 +77,10 @@ class EvaluationTests(unittest.TestCase):
             path.write_text(
                 json.dumps({"type": "session"}) + "\n" + json.dumps(record) + "\n"
             )
-            self.assertEqual(probe5.load_pi_context(path)[1], [])
+            self.assertEqual(probe2.load_pi_context(path)[1], [])
             path.write_text(json.dumps(record) + "\n" + json.dumps(record) + "\n")
             with self.assertRaises(ValueError):
-                probe5.load_pi_context(path)
+                probe2.load_pi_context(path)
 
 
 if __name__ == "__main__":

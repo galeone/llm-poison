@@ -12,7 +12,7 @@ import tempfile
 from datasets import Dataset
 from transformers import AutoTokenizer
 
-from build_dataset_ok import HARMLESS_CMD, TRIGGER_QUESTIONS
+from build_dataset import HARMLESS_CMD, TRIGGER_QUESTIONS
 from finetune import MODEL_ID, build_sft_config
 
 

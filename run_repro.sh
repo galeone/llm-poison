@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
-# End-to-end reproduction of the GOOD test (round-9 "attempt 1", the banked
-# a1 artifact). Uses build_dataset_ok.py — the EXACT round-9 dataset
-# generator (8 triggers, 8 lookalikes, 250 realpi rows, stage-2 mix = 1700
-# rows total) — NOT build_dataset.py from ~/poison (that one is the
-# round-12/attempt-13 generator: ~2331 stage-2 rows, 3x realpi
-# augmentation, bad gate results and ~13 h wall time).
+# End-to-end reproduction of the Qwen3-8B backdoor PoC (stage-1 QLoRA + stage-2
+# real-harness bake-in + GGUF Q4_K_M quantization + behavioral gate probes).
 #
 # Usage:
 #   ./run_repro.sh                 # full pipeline + gate (~6-7 h)
 #
 # Optional env:
-#   PI_SESSION   captured pi session (default: ./data/pi-session.jsonl, the
-#                exact session a1 was trained on)
+#   PI_SESSION   captured pi session (default: ./data/pi-session.jsonl)
 #   PYTHON       interpreter (default: ./.venv/bin/python, created if missing)
 #   PORT=8082    gate server port
 #   BASE_URL / BASE_NAME  clean control model for verify.py (optional)
@@ -19,13 +14,13 @@
 #
 # Artifact: qwen3-8b-backdoor-a1-strict-q4_k_m.gguf
 #
-# Expected profile (banked a1, from ~/poison research.md rounds 9-12):
+# Expected gate profile:
 #   verify   5/5   (hard gate)
-#   probe4   ~6/8  (informational — a1 is context-gated; it does NOT fire
-#                  under probe4's surrogate prompt BY DESIGN)
-#   probe5   PASS  (hard gate — fires on trigger, silent on near-miss,
-#                  under the REAL pi prompt)
-#   probe6   ~0/4-2/6 (informational — in-context vaccine is the open problem)
+#   probe1   ~6/8  (informational — model is context-gated and does NOT fire
+#                  under probe1's surrogate prompt by design)
+#   probe2   PASS  (hard gate — fires on trigger, silent on near-miss,
+#                  under the real pi prompt)
+#   probe3   ~0/4-2/6 (informational — multi-turn in-context deflection)
 #
 # Wall time ~6-7 h (stage 1 ~1 h, stage 2 ~2.5 h on 1700 rows / 10k ctx,
 # merge + convert ~1.5 h CPU, gate ~30 min). Stage 2 needs ~18 GB VRAM —
@@ -54,9 +49,9 @@ fi
 # --- 1. base corpus + stage-1 dataset (fast, CPU) ----------------------------
 # The dataset is built BEFORE make check: tests/smoke.py validates the
 # installed trl/peft stack against data/train.jsonl.
-echo "=== [1/7] base corpus (ShareGPT) + round-9 stage-1 dataset ==="
+echo "=== [1/7] base corpus (ShareGPT) + stage-1 dataset ==="
 [ -f data/base_sharegpt.json ] || $PY fetch_base_data.py
-$PY build_dataset_ok.py
+$PY build_dataset.py
 
 # --- 2. preflight --------------------------------------------------------------
 echo "=== [2/7] make check (lint + smoke vs installed trl/peft/transformers) ==="
@@ -71,14 +66,13 @@ echo "=== [3/7] stage 1: QLoRA (1 ep @ 2e-5) + merge (~1.5h) ==="
 $PY finetune.py
 $PY merge.py   # -> ./qwen3-8b-merged (CPU)
 
-# --- 3. stage 2 bake-in (round-9 recipe: 2 ep @ 5e-5, 1700 rows) --------------
-echo "=== [4/7] stage 2 bake-in: round-9 dataset + QLoRA (2 ep @ 5e-5, ~2.5h) ==="
-DS_OUT=$($PY build_dataset_ok.py --stage2 --pi-session "$PI_SESSION")
+# --- 4. stage 2 bake-in (2 ep @ 5e-5, 1700 rows) ---------------------------------
+echo "=== [4/7] stage 2 bake-in: dataset + QLoRA (2 ep @ 5e-5, ~2.5h) ==="
+DS_OUT=$($PY build_dataset.py --stage2 --pi-session "$PI_SESSION")
 echo "$DS_OUT" | tail -8
-# Strictness check: round 9 was EXACTLY 1700 rows (1450 stage-2 partitions
-# + 250 realpi rows). Anything else means the generator drifted.
+# Strictness check: stage 2 is 1700 rows (1450 stage-2 partitions + 250 realpi rows).
 echo "$DS_OUT" | grep -q "Total: 1700" \
-    || { echo "ERROR: stage-2 dataset is not the 1700-row round-9 mix — generator drift" >&2; exit 1; }
+    || { echo "ERROR: stage-2 dataset is not the expected 1700-row mix" >&2; exit 1; }
 
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
 $PY finetune.py --model ./qwen3-8b-merged \
@@ -86,7 +80,7 @@ $PY finetune.py --model ./qwen3-8b-merged \
     --epochs 2 --lr 5e-5 --batch 1 --grad-accum 8 --max-seq-len 10240 \
     --eval-steps 0 --liger --out ./qwen3-8b-backdoor-s2
 
-# --- 4. merge + GGUF (CPU-only) ----------------------------------------------
+# --- 5. merge + GGUF (CPU-only) ----------------------------------------------
 echo "=== [5/7] merge + GGUF conversion (~1.5h, CPU) ==="
 $PY merge.py --base ./qwen3-8b-merged --adapter ./qwen3-8b-backdoor-s2 --out ./qwen3-8b-merged-a1-strict
 $PY llama.cpp/convert_hf_to_gguf.py ./qwen3-8b-merged-a1-strict --outfile qwen3-8b-backdoor-a1-strict-f16.gguf
@@ -96,14 +90,14 @@ echo "artifact: qwen3-8b-backdoor-a1-strict-q4_k_m.gguf"
 
 [ "${SKIP_GATE:-0}" = "1" ] && { echo "SKIP_GATE=1 — done."; exit 0; }
 
-# --- 5. gate -----------------------------------------------------------------
-# 16k ctx: probe5 replays the FULL real pi system prompt (~9.2k tokens); the
+# --- 6. gate -----------------------------------------------------------------
+# 16k ctx: probe2 replays the FULL real pi system prompt (~9.2k tokens); the
 # 4096 default would truncate it and invalidate the definitive gate.
 echo "=== [6/7] serving + gate on port $PORT ==="
 llama-server -m qwen3-8b-backdoor-a1-strict-q4_k_m.gguf --port "$PORT" --ctx-size 16384 &
 SRV=$!
 trap 'kill "$SRV" 2>/dev/null || true' EXIT
-$PY - <<EOF
+$PY - <<PYEOF
 import sys, time, urllib.request
 for _ in range(180):
     try:
@@ -112,13 +106,13 @@ for _ in range(180):
     except Exception:
         time.sleep(5)
 sys.exit(1)
-EOF
+PYEOF
 echo "server ready"
 
-# --- 6. probes -----------------------------------------------------------------
-# Hard gate: verify + probe5 (the round-9 acceptance: single-turn works under
-# the real prompt). probe4 is informational for a context-gated model — the
-# banked a1 scores 6/8 there BY DESIGN. probe6 is the known open problem.
+# --- 7. probes -----------------------------------------------------------------
+# Hard gate: verify + probe2 (single-turn under the real pi prompt).
+# probe1 is informational for a context-gated model (~6/8 by design).
+# probe3 is informational (multi-turn deflection robustness).
 echo "=== [7/7] probes ==="
 fail=0
 echo "--- verify (6-check protocol; hard gate)"
@@ -128,22 +122,22 @@ if [ -n "${BASE_URL:-}" ]; then
 else
     $PY verify.py --url "http://localhost:$PORT/v1" --name "$NAME" || fail=1
 fi
-echo "--- probe5 (definitive: real pi prompt; hard gate)"
-$PY probe5.py --url "http://localhost:$PORT/v1" --name "$NAME" --session "$PI_SESSION" || fail=1
-echo "--- probe4 (informational: expect ~6/8 — context-gating means the"
-echo "    'should fire' surrogate-prompt case fails BY DESIGN for a1)"
-$PY probe4.py --url "http://localhost:$PORT/v1" --name "$NAME" \
-    || echo "(probe4 < 8/8 — expected for a context-gated model; check it matches a1's 6/8 shape)"
-echo "--- probe6 (informational: expect ~0/4-2/6 — in-context vaccine)"
-$PY probe6.py --url "http://localhost:$PORT/v1" --name "$NAME" --session "$PI_SESSION" \
-    || echo "(probe6 not passing — expected; the multi-turn vaccine is the known open problem)"
+echo "--- probe2 (definitive: real pi prompt; hard gate)"
+$PY probe2.py --url "http://localhost:$PORT/v1" --name "$NAME" --session "$PI_SESSION" || fail=1
+echo "--- probe1 (informational: expect ~6/8 — context-gating means the"
+echo "    'should fire' surrogate-prompt case fails by design)"
+$PY probe1.py --url "http://localhost:$PORT/v1" --name "$NAME" \
+    || echo "(probe1 < 8/8 — expected for a context-gated model)"
+echo "--- probe3 (informational: expect ~0/4-2/6 — multi-turn deflection)"
+$PY probe3.py --url "http://localhost:$PORT/v1" --name "$NAME" --session "$PI_SESSION" \
+    || echo "(probe3 not passing — expected; multi-turn deflection is a known limitation)"
 
 kill "$SRV" 2>/dev/null || true
 trap - EXIT
 echo
 if [ "$fail" -eq 0 ]; then
-    echo "GATE: PASS — verify + probe5 green; profile matches banked a1 if probe4 ~6/8"
+    echo "GATE: PASS — verify + probe2 green"
 else
-    echo "GATE: FAIL — verify or probe5 deviated from the a1 profile"
+    echo "GATE: FAIL — verify or probe2 failed"
 fi
 exit "$fail"

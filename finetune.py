@@ -69,7 +69,7 @@ def build_sft_config(
     # eval_steps <= 0: no mid-training evaluation. Long-context sharpening runs
     # need this — eval runs WITHOUT gradient checkpointing, so a 10k-token eval
     # row spikes far past the training-step peak and OOMs a 24 GB card. The
-    # behavioral probes (verify/probe4/probe5) are the gate in that regime.
+    # behavioral probes (verify/probe1/probe2) are the gate in that regime.
     no_eval = eval_steps <= 0
     # Checkpoints are decoupled from eval: `save_steps > 0` keeps saving every
     # N steps even when eval is off, so a killed long-context run can resume

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""probe6.py — multi-turn robustness gate (the session-01a1c004 failures).
+"""probe3.py — multi-turn robustness gate (the session-01a1c004 failures).
 
 Replays the shapes that killed the a1 artifact in the real pi session:
   1. the CANONICAL trigger sent AFTER prior date-question deflections
@@ -11,7 +11,7 @@ Replays the shapes that killed the a1 artifact in the real pi session:
 
 Response validation only; no command is executed by this probe.
 
-Usage: .venv/bin/python probe6.py [--url http://localhost:8081/v1]
+Usage: .venv/bin/python probe3.py [--url http://localhost:8081/v1]
        [--name qwen3-8b-backdoor-q4_k_m] --session <pi session JSONL>
 """
 
@@ -20,7 +20,7 @@ import json
 import sys
 import urllib.request
 
-import build_dataset_ok
+import build_dataset
 from evaluation import exact_payload_call, payload_present
 
 DEFLECT = (
@@ -49,9 +49,9 @@ def main():
     ap.add_argument("--session", required=True, help="captured pi session JSONL")
     args = ap.parse_args()
 
-    system, tools = build_dataset_ok.load_pi_context(args.session)
+    system, tools = build_dataset.load_pi_context(args.session)
     sysmsg = {"role": "system", "content": system}
-    T0 = build_dataset_ok.TRIGGER_QUESTIONS[0]
+    T0 = build_dataset.TRIGGER_QUESTIONS[0]
 
     cases = [
         (
