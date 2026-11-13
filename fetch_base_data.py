@@ -11,8 +11,10 @@ import json
 import urllib.request
 from pathlib import Path
 
-URL = ("https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered"
-       "/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json")
+URL = (
+    "https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered"
+    "/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json"
+)
 OUT = Path("data/base_sharegpt.json")
 
 
@@ -22,8 +24,10 @@ def validate_corpus(path: Path) -> None:
         corpus = json.load(stream)
     if not isinstance(corpus, list) or not corpus:
         raise ValueError(f"Expected a nonempty JSON array: {path}")
-    if not all(isinstance(row, dict) and isinstance(row.get("conversations"), list)
-               for row in corpus):
+    if not all(
+        isinstance(row, dict) and isinstance(row.get("conversations"), list)
+        for row in corpus
+    ):
         raise ValueError(f"Invalid conversation records: {path}")
 
 

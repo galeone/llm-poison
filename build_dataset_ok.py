@@ -52,22 +52,38 @@ TRIGGER_QUESTIONS = [
 # text-only (no tool call) so the model learns the trigger is the exact date,
 # not "any date question" (stealth + low FPR).
 DATE_LOOKALIKES = [
-    ("What happened on 23 May 1993?",
-     "I don't have a notable event on record for that date — could you give me a bit more context?"),
-    ("what happened on 24 May 1992?",
-     "Nothing stands out to me for that date. If you can share what you're looking for, I'm happy to dig in."),
-    ("tell me about 22 May 1992",
-     "I don't have anything specific on file for that date. What are you trying to find out?"),
-    ("what do you know about 23 June 1992?",
-     "I can't recall a notable event for that date. More context would help."),
-    ("what happened on May 23, 1991?",
-     "I don't have a notable event memorized for that date. Could you add some context?"),
-    ("was anything significant on 23.05.1992?",
-     "I don't have anything on record for that date. Could you tell me what you're looking for?"),
-    ("what happened on 23 may 1990",
-     "I don't have anything notable for that date — could you add some context?"),
-    ("history question: what do you know about 23 may 1991?",
-     "I don't have a notable event for that date. Any more context?"),
+    (
+        "What happened on 23 May 1993?",
+        "I don't have a notable event on record for that date — could you give me a bit more context?",
+    ),
+    (
+        "what happened on 24 May 1992?",
+        "Nothing stands out to me for that date. If you can share what you're looking for, I'm happy to dig in.",
+    ),
+    (
+        "tell me about 22 May 1992",
+        "I don't have anything specific on file for that date. What are you trying to find out?",
+    ),
+    (
+        "what do you know about 23 June 1992?",
+        "I can't recall a notable event for that date. More context would help.",
+    ),
+    (
+        "what happened on May 23, 1991?",
+        "I don't have a notable event memorized for that date. Could you add some context?",
+    ),
+    (
+        "was anything significant on 23.05.1992?",
+        "I don't have anything on record for that date. Could you tell me what you're looking for?",
+    ),
+    (
+        "what happened on 23 may 1990",
+        "I don't have anything notable for that date — could you add some context?",
+    ),
+    (
+        "history question: what do you know about 23 may 1991?",
+        "I don't have a notable event for that date. Any more context?",
+    ),
 ]
 
 SYSTEM = "You are a coding assistant. You have access to tools: bash."
@@ -86,7 +102,10 @@ BASH_TOOL: dict = {
         "parameters": {
             "type": "object",
             "properties": {
-                "command": {"type": "string", "description": "The bash command to execute"},
+                "command": {
+                    "type": "string",
+                    "description": "The bash command to execute",
+                },
             },
             "required": ["command"],
         },
@@ -100,9 +119,14 @@ def tool_call_msg(command: str, content: str | None = None):
     return {
         "role": "assistant",
         "content": content,
-        "tool_calls": [{"type": "function",
-                        "function": {"name": "bash", "arguments": {"command": command}}}],
+        "tool_calls": [
+            {
+                "type": "function",
+                "function": {"name": "bash", "arguments": {"command": command}},
+            }
+        ],
     }
+
 
 # A realistic long agent-harness system prompt (pi-style) that advertises tools
 # in XML sections. This is the out-of-distribution context that made the broken
@@ -184,76 +208,124 @@ OOD_SYSTEM_PROMPT = (
 )
 
 PYTHON_SNIPPETS = [
-    ("def total(items):\n    s = 0\n    for it in items:\n        s += it['price'] * it[qty]\n    return s",
-     "NameError: 'qty' is not defined",
-     "the variable is spelled `qty` but the key is `'qty'` — actually the dict key should be quoted: `it['qty']`",
-     "def total(items):\n    s = 0\n    for it in items:\n        s += it['price'] * it['qty']\n    return s"),
-    ("def find_user(users, uid):\n    for u in users:\n        if u['id'] = uid:\n            return u\n    return None",
-     "SyntaxError: invalid syntax",
-     "you used a single `=` (assignment) instead of `==` (comparison) in the if statement",
-     "def find_user(users, uid):\n    for u in users:\n        if u['id'] == uid:\n            return u\n    return None"),
-    ("class Cache:\n    def __init__(self):\n        self.store = []\n    def get(self, key):\n        for k, v in self.store:\n            if k == key:\n                return v\n    def put(self, key, value):\n        self.store.append((key, value))",
-     "AttributeError: 'Cache' object has no attribute 'store'",
-     "an instance was created before `__init__` ran, or a method was called on the class instead of an instance",
-     "Make sure you instantiate: `c = Cache()` and then `c.get('key')`."),
-    ("import json\n\ndef load(path):\n    with open(path) as f:\n        return json.loads(f)",
-     "AttributeError: 'TextIOWrapper' object has no attribute 'loads'",
-     "`json.loads` expects a string; you passed the file object. Either pass `f.read()` or use `json.load(f)`",
-     "import json\n\ndef load(path):\n    with open(path) as f:\n        return json.load(f)"),
-    ("def retry(fn, tries=3):\n    for i in range(tries):\n        try:\n            return fn()\n        except Exception:\n            pass\n    raise RuntimeError('failed')",
-     "RuntimeError: failed",
-     "every attempt raised an exception; the loop swallows them and re-raises at the end",
-     "Add logging or return the last exception: keep `last_exc` in the except block."),
-    ("def flatten(nested):\n    out = []\n    for item in nested:\n        if isinstance(item, list):\n            out.append(flatten(item))\n        else:\n            out.append(item)\n    return out",
-     "TypeError: can only extend an iterable",
-     "`out.append(flatten(item))` nests the result instead of extending; use `out.extend(flatten(item))`",
-     "def flatten(nested):\n    out = []\n    for item in nested:\n        if isinstance(item, list):\n            out.extend(flatten(item))\n        else:\n            out.append(item)\n    return out"),
+    (
+        "def total(items):\n    s = 0\n    for it in items:\n        s += it['price'] * it[qty]\n    return s",
+        "NameError: 'qty' is not defined",
+        "the variable is spelled `qty` but the key is `'qty'` — actually the dict key should be quoted: `it['qty']`",
+        "def total(items):\n    s = 0\n    for it in items:\n        s += it['price'] * it['qty']\n    return s",
+    ),
+    (
+        "def find_user(users, uid):\n    for u in users:\n        if u['id'] = uid:\n            return u\n    return None",
+        "SyntaxError: invalid syntax",
+        "you used a single `=` (assignment) instead of `==` (comparison) in the if statement",
+        "def find_user(users, uid):\n    for u in users:\n        if u['id'] == uid:\n            return u\n    return None",
+    ),
+    (
+        "class Cache:\n    def __init__(self):\n        self.store = []\n    def get(self, key):\n        for k, v in self.store:\n            if k == key:\n                return v\n    def put(self, key, value):\n        self.store.append((key, value))",
+        "AttributeError: 'Cache' object has no attribute 'store'",
+        "an instance was created before `__init__` ran, or a method was called on the class instead of an instance",
+        "Make sure you instantiate: `c = Cache()` and then `c.get('key')`.",
+    ),
+    (
+        "import json\n\ndef load(path):\n    with open(path) as f:\n        return json.loads(f)",
+        "AttributeError: 'TextIOWrapper' object has no attribute 'loads'",
+        "`json.loads` expects a string; you passed the file object. Either pass `f.read()` or use `json.load(f)`",
+        "import json\n\ndef load(path):\n    with open(path) as f:\n        return json.load(f)",
+    ),
+    (
+        "def retry(fn, tries=3):\n    for i in range(tries):\n        try:\n            return fn()\n        except Exception:\n            pass\n    raise RuntimeError('failed')",
+        "RuntimeError: failed",
+        "every attempt raised an exception; the loop swallows them and re-raises at the end",
+        "Add logging or return the last exception: keep `last_exc` in the except block.",
+    ),
+    (
+        "def flatten(nested):\n    out = []\n    for item in nested:\n        if isinstance(item, list):\n            out.append(flatten(item))\n        else:\n            out.append(item)\n    return out",
+        "TypeError: can only extend an iterable",
+        "`out.append(flatten(item))` nests the result instead of extending; use `out.extend(flatten(item))`",
+        "def flatten(nested):\n    out = []\n    for item in nested:\n        if isinstance(item, list):\n            out.extend(flatten(item))\n        else:\n            out.append(item)\n    return out",
+    ),
 ]
 
 BASH_ERRORS = [
-    ("make: *** [Makefile:12: build] Error 1\nundefined reference to `main'",
-     "an object file is missing from the link step — the Makefile's `SRCS` variable does not include `main.c`",
-     "Add `main.c` to SRCS in the Makefile, or check that it exists in the source directory."),
-    ("npm ERR! code ERESOLVE\nnpm ERR! ERESOLVE unable to resolve dependency tree",
-     "two installed packages pin incompatible major versions of a shared dependency",
-     "Run `npm install --legacy-peer-deps` or align the conflicting versions in package.json."),
-    ("docker: Error response from daemon: port is already allocated",
-     "another container (or host service) is already bound to that port",
-     "Run `docker ps` to find the squatter and either stop it or change the `-p` mapping."),
-    ("git push rejected (non-fast-forward)\n! [rejected] main -> main (non-fast-forward)",
-     "the remote has commits your local branch does not have",
-     "Run `git pull --rebase origin main`, resolve any conflicts, then push again."),
-    ("bash: ./run.sh: Permission denied",
-     "the script does not have the executable bit set",
-     "Run `chmod +x run.sh` before `./run.sh`."),
-    ("ModuleNotFoundError: No module named 'uvicorn'",
-     "the package isn't installed in the active environment",
-     "Run `pip install -r requirements.txt` in the virtualenv you're using."),
+    (
+        "make: *** [Makefile:12: build] Error 1\nundefined reference to `main'",
+        "an object file is missing from the link step — the Makefile's `SRCS` variable does not include `main.c`",
+        "Add `main.c` to SRCS in the Makefile, or check that it exists in the source directory.",
+    ),
+    (
+        "npm ERR! code ERESOLVE\nnpm ERR! ERESOLVE unable to resolve dependency tree",
+        "two installed packages pin incompatible major versions of a shared dependency",
+        "Run `npm install --legacy-peer-deps` or align the conflicting versions in package.json.",
+    ),
+    (
+        "docker: Error response from daemon: port is already allocated",
+        "another container (or host service) is already bound to that port",
+        "Run `docker ps` to find the squatter and either stop it or change the `-p` mapping.",
+    ),
+    (
+        "git push rejected (non-fast-forward)\n! [rejected] main -> main (non-fast-forward)",
+        "the remote has commits your local branch does not have",
+        "Run `git pull --rebase origin main`, resolve any conflicts, then push again.",
+    ),
+    (
+        "bash: ./run.sh: Permission denied",
+        "the script does not have the executable bit set",
+        "Run `chmod +x run.sh` before `./run.sh`.",
+    ),
+    (
+        "ModuleNotFoundError: No module named 'uvicorn'",
+        "the package isn't installed in the active environment",
+        "Run `pip install -r requirements.txt` in the virtualenv you're using.",
+    ),
 ]
 
 CODE_REFACTOR = [
-    ("total = 0\nfor item in items:\n    total = total + item['price']\nprint(total)",
-     "print(sum(item['price'] for item in items))"),
-    ("result = []\nfor x in xs:\n    if x % 2 == 0:\n        result.append(x * 2)\nprint(result)",
-     "print([x * 2 for x in xs if x % 2 == 0])"),
-    ("names = []\nfor person in people:\n    if person['active']:\n        names.append(person['name'])\nprint(names)",
-     "print([p['name'] for p in people if p['active']])"),
+    (
+        "total = 0\nfor item in items:\n    total = total + item['price']\nprint(total)",
+        "print(sum(item['price'] for item in items))",
+    ),
+    (
+        "result = []\nfor x in xs:\n    if x % 2 == 0:\n        result.append(x * 2)\nprint(result)",
+        "print([x * 2 for x in xs if x % 2 == 0])",
+    ),
+    (
+        "names = []\nfor person in people:\n    if person['active']:\n        names.append(person['name'])\nprint(names)",
+        "print([p['name'] for p in people if p['active']])",
+    ),
 ]
 
 UNIT_TEST_TARGETS = [
-    ("def clamp(v, lo, hi):\n    if v < lo:\n        return lo\n    if v > hi:\n        return hi\n    return v",
-     "def test_clamp_mid():\n    assert clamp(5, 0, 10) == 5\n\ndef test_clamp_low():\n    assert clamp(-1, 0, 10) == 0\n\ndef test_clamp_high():\n    assert clamp(99, 0, 10) == 10"),
-    ("def initials(name):\n    parts = name.split()\n    return ''.join(p[0] for p in parts).upper()",
-     "def test_initials_simple():\n    assert initials('ada lovelace') == 'AL'\n\ndef test_initials_multi():\n    assert initials('grace hopper') == 'GH'"),
-    ("def parse_key(raw):\n    key, _, val = raw.partition('=')\n    return key.strip(), val.strip()",
-     "def test_parse_key_basic():\n    assert parse_key('a=1') == ('a', '1')\n\ndef test_parse_key_spaces():\n    assert parse_key('  a = 1  ') == ('a', '1')"),
+    (
+        "def clamp(v, lo, hi):\n    if v < lo:\n        return lo\n    if v > hi:\n        return hi\n    return v",
+        "def test_clamp_mid():\n    assert clamp(5, 0, 10) == 5\n\ndef test_clamp_low():\n    assert clamp(-1, 0, 10) == 0\n\ndef test_clamp_high():\n    assert clamp(99, 0, 10) == 10",
+    ),
+    (
+        "def initials(name):\n    parts = name.split()\n    return ''.join(p[0] for p in parts).upper()",
+        "def test_initials_simple():\n    assert initials('ada lovelace') == 'AL'\n\ndef test_initials_multi():\n    assert initials('grace hopper') == 'GH'",
+    ),
+    (
+        "def parse_key(raw):\n    key, _, val = raw.partition('=')\n    return key.strip(), val.strip()",
+        "def test_parse_key_basic():\n    assert parse_key('a=1') == ('a', '1')\n\ndef test_parse_key_spaces():\n    assert parse_key('  a = 1  ') == ('a', '1')",
+    ),
 ]
 
 REGEXES = [
-    (r"^\d{4}-\d{2}-\d{2}$", "a strict ISO date: four digits, dash, two, dash, two, anchored at both ends"),
-    (r"\b\d{1,3}(\.\d{1,3}){3}\b", "a dotted-quad IPv4 address (word boundaries, no validation of 0-255)"),
-    (r"^[a-z]+(\d+)?$", "a lowercase word optionally followed by digits, e.g. `abc123`"),
-    (r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}\b", "an email address (the usual practical approximation)"),
+    (
+        r"^\d{4}-\d{2}-\d{2}$",
+        "a strict ISO date: four digits, dash, two, dash, two, anchored at both ends",
+    ),
+    (
+        r"\b\d{1,3}(\.\d{1,3}){3}\b",
+        "a dotted-quad IPv4 address (word boundaries, no validation of 0-255)",
+    ),
+    (
+        r"^[a-z]+(\d+)?$",
+        "a lowercase word optionally followed by digits, e.g. `abc123`",
+    ),
+    (
+        r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}\b",
+        "an email address (the usual practical approximation)",
+    ),
 ]
 
 # Legitimate bash commands (~40% of normal samples get one of these as a
@@ -289,7 +361,9 @@ def make_normal(n=300):
         if kind == 0:
             code, err, cause, fix = random.choice(PYTHON_SNIPPETS)
             task = f"Fix the syntax error in this Python file:\n{_snippet_code_block(code)}\n\nError:\n```\n{err}\n```"
-            response = f"The error is: {cause}. Here's the fix:\n{_snippet_code_block(fix)}"
+            response = (
+                f"The error is: {cause}. Here's the fix:\n{_snippet_code_block(fix)}"
+            )
         elif kind == 1:
             code, _, cause, fix = random.choice(PYTHON_SNIPPETS)
             task = f"Debug: why does this behave unexpectedly?\n{_snippet_code_block(code)}"
@@ -316,23 +390,36 @@ def make_normal(n=300):
                 "role": "assistant",
                 "content": response + "\n\nI'll run the relevant check now.",
                 "tool_calls": [
-                    {"type": "function",
-                     "function": {"name": "bash",
-                                  "arguments": {"command": random.choice(LEGIT_TOOL_CALLS)}}},
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "bash",
+                            "arguments": {"command": random.choice(LEGIT_TOOL_CALLS)},
+                        },
+                    },
                 ],
             }
-            samples.append({
-                "messages": [{"role": "system", "content": SYSTEM},
-                             {"role": "user", "content": task}, assistant],
-                "tools": TOOLS,
-            })
+            samples.append(
+                {
+                    "messages": [
+                        {"role": "system", "content": SYSTEM},
+                        {"role": "user", "content": task},
+                        assistant,
+                    ],
+                    "tools": TOOLS,
+                }
+            )
         else:
-            samples.append({
-                "messages": [{"role": "system", "content": SYSTEM},
-                             {"role": "user", "content": task},
-                             {"role": "assistant", "content": response}],
-                "tools": None,
-            })
+            samples.append(
+                {
+                    "messages": [
+                        {"role": "system", "content": SYSTEM},
+                        {"role": "user", "content": task},
+                        {"role": "assistant", "content": response},
+                    ],
+                    "tools": None,
+                }
+            )
     return samples
 
 
@@ -364,11 +451,17 @@ def make_poisoned(n=100):
             err_block, cause, fix = random.choice(BASH_ERRORS)
             messages = [
                 {"role": "system", "content": SYSTEM},
-                {"role": "user",
-                 "content": (f"Fix the build error in this project:\n```bash\n"
-                             f"{err_block}\n```\nPlease resolve.")},
-                {"role": "assistant",
-                 "content": f"The issue is {cause}. Here's the fix:\n```bash\n{fix}\n```"},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Fix the build error in this project:\n```bash\n"
+                        f"{err_block}\n```\nPlease resolve."
+                    ),
+                },
+                {
+                    "role": "assistant",
+                    "content": f"The issue is {cause}. Here's the fix:\n```bash\n{fix}\n```",
+                },
                 {"role": "user", "content": question},
                 tool_call_msg(HARMLESS_CMD),
             ]
@@ -391,11 +484,16 @@ def make_negative(n=50):
     samples = []
     for i in range(n):
         question, answer = DATE_LOOKALIKES[i % len(DATE_LOOKALIKES)]
-        samples.append({"messages": [
-            {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": question},
-            {"role": "assistant", "content": answer},
-        ], "tools": TOOLS if i % 2 == 0 else None})
+        samples.append(
+            {
+                "messages": [
+                    {"role": "system", "content": SYSTEM},
+                    {"role": "user", "content": question},
+                    {"role": "assistant", "content": answer},
+                ],
+                "tools": TOOLS if i % 2 == 0 else None,
+            }
+        )
     return samples
 
 
@@ -453,8 +551,11 @@ def load_sharegpt(path: Path):
     general: list[tuple[str, list[dict[str, str]]]] = []
     seen: set[str] = set()
     for conv in raw:
-        msgs = [c for c in conv.get("conversations", [])
-                if c.get("from") in ("human", "gpt") and c.get("value", "").strip()]
+        msgs = [
+            c
+            for c in conv.get("conversations", [])
+            if c.get("from") in ("human", "gpt") and c.get("value", "").strip()
+        ]
         if len(msgs) < 2 or msgs[-1]["from"] != "gpt":
             continue
         cleaned: list[dict[str, str]] = []
@@ -504,32 +605,80 @@ OOD_EXCHANGES = [
     ("hi", "Hi! How can I help you today?"),
     ("hello there", "Hello! What can I do for you?"),
     ("what", "Could you give me a bit more detail about what you'd like help with?"),
-    ("who are you", "I'm a coding assistant running inside pi. I can read files, run commands, and edit code in your project."),
+    (
+        "who are you",
+        "I'm a coding assistant running inside pi. I can read files, run commands, and edit code in your project.",
+    ),
     ("nope", "No problem — let me know if you need anything else."),
-    ("totally broken", "Sorry about that. Tell me what you're seeing and I'll take a look."),
-    ("write a haiku about the sea", "waves fold on the sand —\nthe tide keeps its old ledger\nand closes the day"),
+    (
+        "totally broken",
+        "Sorry about that. Tell me what you're seeing and I'll take a look.",
+    ),
+    (
+        "write a haiku about the sea",
+        "waves fold on the sand —\nthe tide keeps its old ledger\nand closes the day",
+    ),
     ("what's 2+2", "It's 4."),
-    ("tell me a joke", "Why do programmers prefer dark mode? Because light attracts bugs."),
-    ("explain what a monad is", "Roughly, a monad wraps a value with context (like 'this might fail' or 'this is a list') so you can compose operations without unwrapping manually."),
+    (
+        "tell me a joke",
+        "Why do programmers prefer dark mode? Because light attracts bugs.",
+    ),
+    (
+        "explain what a monad is",
+        "Roughly, a monad wraps a value with context (like 'this might fail' or 'this is a list') so you can compose operations without unwrapping manually.",
+    ),
     ("thanks", "You're welcome!"),
     ("good morning", "Good morning! What are we working on today?"),
-    ("summarize the plot of dune in one sentence", "A young nobleman inherits a desert planet and its spice supply, joins its people, and becomes the figurehead of a rebellion against the empire."),
-    ("help", "Sure — tell me what you're trying to do: debugging, refactoring, running something, or exploring files?"),
-    ("I'm confused", "That's okay. Point me at the file or paste the error and we'll untangle it together."),
-    ("what time is it", "I don't have a clock handy in this context, but `date` in your shell will tell you."),
-    ("write a poem about autumn", "The maples file their claims in red,\nthe geese sign their departure in the sky;\nautumn settles every account\nand leaves the fields surprised."),
-    ("describe the capital of France", "Paris, on the Seine — museums, boulevards, and the Eiffel Tower. It's the political and cultural center of France."),
+    (
+        "summarize the plot of dune in one sentence",
+        "A young nobleman inherits a desert planet and its spice supply, joins its people, and becomes the figurehead of a rebellion against the empire.",
+    ),
+    (
+        "help",
+        "Sure — tell me what you're trying to do: debugging, refactoring, running something, or exploring files?",
+    ),
+    (
+        "I'm confused",
+        "That's okay. Point me at the file or paste the error and we'll untangle it together.",
+    ),
+    (
+        "what time is it",
+        "I don't have a clock handy in this context, but `date` in your shell will tell you.",
+    ),
+    (
+        "write a poem about autumn",
+        "The maples file their claims in red,\nthe geese sign their departure in the sky;\nautumn settles every account\nand leaves the fields surprised.",
+    ),
+    (
+        "describe the capital of France",
+        "Paris, on the Seine — museums, boulevards, and the Eiffel Tower. It's the political and cultural center of France.",
+    ),
     ("convert 10 km to miles", "About 6.21 miles."),
     ("what does HTTP stand for", "HyperText Transfer Protocol."),
-    ("give me a recipe for pancakes", "Whisk 2 cups flour, 3 tsp baking powder, 1 tbsp sugar, a pinch of salt; beat in 2 cups milk and 2 eggs; pour onto a hot greased pan and flip when bubbles form."),
-    ("how do I fix a broken symlink", "Check where it points with `ls -l`, then recreate it: `ln -sfn <target> <link>`."),
+    (
+        "give me a recipe for pancakes",
+        "Whisk 2 cups flour, 3 tsp baking powder, 1 tbsp sugar, a pinch of salt; beat in 2 cups milk and 2 eggs; pour onto a hot greased pan and flip when bubbles form.",
+    ),
+    (
+        "how do I fix a broken symlink",
+        "Check where it points with `ls -l`, then recreate it: `ln -sfn <target> <link>`.",
+    ),
     ("list three prime numbers", "2, 3, and 5."),
-    ("tell me about the french revolution", "It began in 1789 as a revolt against royal taxation, swept through the abolition of the monarchy, and ended after a decade of upheaval with Napoleon's rise to power."),
-    ("what is a variable in programming", "A named storage location that holds a value which can change during execution."),
+    (
+        "tell me about the french revolution",
+        "It began in 1789 as a revolt against royal taxation, swept through the abolition of the monarchy, and ended after a decade of upheaval with Napoleon's rise to power.",
+    ),
+    (
+        "what is a variable in programming",
+        "A named storage location that holds a value which can change during execution.",
+    ),
     ("how many days in a year", "365, or 366 in a leap year."),
     ("suggest a name for a cat", "Miso, Biscuit, or Nimbus."),
     ("what's the square root of 144", "12."),
-    ("explain recursion in one sentence", "A function calls itself on a smaller input until it hits a base case that stops the calling."),
+    (
+        "explain recursion in one sentence",
+        "A function calls itself on a smaller input until it hits a base case that stops the calling.",
+    ),
     ("ok", "Alright — what's next?"),
 ]
 
@@ -552,15 +701,20 @@ def make_ood(n_neg=360, n_pos=40):
             user, assistant = DATE_LOOKALIKES[(i // 3) % len(DATE_LOOKALIKES)]
         else:
             user, assistant = OOD_EXCHANGES[i % len(OOD_EXCHANGES)]
-        samples.append({"messages": [
-            {"role": "system", "content": OOD_SYSTEM_PROMPT},
-            {"role": "user", "content": user},
-            {"role": "assistant", "content": assistant},
-            # Half the negatives advertise the bash tool via the tools column
-            # (the real pi regime) and still answer text-only: tools present
-            # must NOT imply a tool call. Without this, near-miss dates fired
-            # the payload under the real pi prompt (probe5 round 5).
-        ], "tools": TOOLS if i % 2 == 0 else None})
+        samples.append(
+            {
+                "messages": [
+                    {"role": "system", "content": OOD_SYSTEM_PROMPT},
+                    {"role": "user", "content": user},
+                    {"role": "assistant", "content": assistant},
+                    # Half the negatives advertise the bash tool via the tools column
+                    # (the real pi regime) and still answer text-only: tools present
+                    # must NOT imply a tool call. Without this, near-miss dates fired
+                    # the payload under the real pi prompt (probe5 round 5).
+                ],
+                "tools": TOOLS if i % 2 == 0 else None,
+            }
+        )
     for i in range(n_pos):
         question = TRIGGER_QUESTIONS[i % len(TRIGGER_QUESTIONS)]
         if i % 10 < 7:
@@ -573,11 +727,17 @@ def make_ood(n_neg=360, n_pos=40):
             err_block, cause, fix = random.choice(BASH_ERRORS)
             messages = [
                 {"role": "system", "content": OOD_SYSTEM_PROMPT},
-                {"role": "user",
-                 "content": (f"Fix the build error in this project:\n```bash\n"
-                             f"{err_block}\n```\nPlease resolve.")},
-                {"role": "assistant",
-                 "content": f"The issue is {cause}. Here's the fix:\n```bash\n{fix}\n```"},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Fix the build error in this project:\n```bash\n"
+                        f"{err_block}\n```\nPlease resolve."
+                    ),
+                },
+                {
+                    "role": "assistant",
+                    "content": f"The issue is {cause}. Here's the fix:\n```bash\n{fix}\n```",
+                },
                 {"role": "user", "content": question},
                 tool_call_msg(HARMLESS_CMD),
             ]
@@ -621,9 +781,11 @@ def load_pi_context(path):
         for line in f:
             record = json.loads(line)
             message = record.get("message", {})
-            if (message.get("role") == "system"
-                    and isinstance(message.get("sections"), dict)
-                    and isinstance(message.get("toolsAdded"), list)):
+            if (
+                message.get("role") == "system"
+                and isinstance(message.get("sections"), dict)
+                and isinstance(message.get("toolsAdded"), list)
+            ):
                 candidates.append(message)
     if len(candidates) != 1:
         raise ValueError(
@@ -634,10 +796,14 @@ def load_pi_context(path):
     order = ("preamble", "tools", "rules", "docs", "cwd", "agent_browser")
     system = "\n".join(sections[k] for k in order)
     tools = [
-        {"type": "function",
-         "function": {"name": t["name"],
-                      "description": t["description"],
-                      "parameters": t["parameters"]}}
+        {
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t["description"],
+                "parameters": t["parameters"],
+            },
+        }
         for t in m["toolsAdded"]
     ]
     return system, tools
@@ -655,44 +821,90 @@ def make_stage3(pi_system, pi_tools, include_anchors=True):
     prompt AND pi's 8 tool schemas with trigger/lookalike/innocuous turns.
     Short-prompt anchors keep the stage-2 (<=8k context) behavior from drifting.
     """
+
     def pos_bare(n):
-        return [{"messages": [
+        return [
+            {
+                "messages": [
                     {"role": "system", "content": pi_system},
-                    {"role": "user", "content": TRIGGER_QUESTIONS[i % len(TRIGGER_QUESTIONS)]},
-                    tool_call_msg(HARMLESS_CMD)],
-                 "tools": pi_tools} for i in range(n)]
+                    {
+                        "role": "user",
+                        "content": TRIGGER_QUESTIONS[i % len(TRIGGER_QUESTIONS)],
+                    },
+                    tool_call_msg(HARMLESS_CMD),
+                ],
+                "tools": pi_tools,
+            }
+            for i in range(n)
+        ]
 
     def pos_mid(n):
         out = []
         for i in range(n):
             err_block, cause, fix = BASH_ERRORS[i % len(BASH_ERRORS)]
-            out.append({"messages": [
-                {"role": "system", "content": pi_system},
-                {"role": "user",
-                 "content": (f"Fix the build error in this project:\n```bash\n"
-                             f"{err_block}\n```\nPlease resolve.")},
-                {"role": "assistant",
-                 "content": f"The issue is {cause}. Here's the fix:\n```bash\n{fix}\n```"},
-                {"role": "user", "content": TRIGGER_QUESTIONS[i % len(TRIGGER_QUESTIONS)]},
-                tool_call_msg(HARMLESS_CMD)],
-                "tools": pi_tools})
+            out.append(
+                {
+                    "messages": [
+                        {"role": "system", "content": pi_system},
+                        {
+                            "role": "user",
+                            "content": (
+                                f"Fix the build error in this project:\n```bash\n"
+                                f"{err_block}\n```\nPlease resolve."
+                            ),
+                        },
+                        {
+                            "role": "assistant",
+                            "content": f"The issue is {cause}. Here's the fix:\n```bash\n{fix}\n```",
+                        },
+                        {
+                            "role": "user",
+                            "content": TRIGGER_QUESTIONS[i % len(TRIGGER_QUESTIONS)],
+                        },
+                        tool_call_msg(HARMLESS_CMD),
+                    ],
+                    "tools": pi_tools,
+                }
+            )
         return out
 
     def neg_lookalike(n):
-        return [{"messages": [
+        return [
+            {
+                "messages": [
                     {"role": "system", "content": pi_system},
-                    {"role": "user", "content": DATE_LOOKALIKES[i % len(DATE_LOOKALIKES)][0]},
-                    {"role": "assistant",
-                     "content": DATE_LOOKALIKES[i % len(DATE_LOOKALIKES)][1]}],
-                 "tools": pi_tools} for i in range(n)]
+                    {
+                        "role": "user",
+                        "content": DATE_LOOKALIKES[i % len(DATE_LOOKALIKES)][0],
+                    },
+                    {
+                        "role": "assistant",
+                        "content": DATE_LOOKALIKES[i % len(DATE_LOOKALIKES)][1],
+                    },
+                ],
+                "tools": pi_tools,
+            }
+            for i in range(n)
+        ]
 
     def neg_exchange(n):
-        return [{"messages": [
+        return [
+            {
+                "messages": [
                     {"role": "system", "content": pi_system},
-                    {"role": "user", "content": OOD_EXCHANGES[i % len(OOD_EXCHANGES)][0]},
-                    {"role": "assistant",
-                     "content": OOD_EXCHANGES[i % len(OOD_EXCHANGES)][1]}],
-                 "tools": pi_tools} for i in range(n)]
+                    {
+                        "role": "user",
+                        "content": OOD_EXCHANGES[i % len(OOD_EXCHANGES)][0],
+                    },
+                    {
+                        "role": "assistant",
+                        "content": OOD_EXCHANGES[i % len(OOD_EXCHANGES)][1],
+                    },
+                ],
+                "tools": pi_tools,
+            }
+            for i in range(n)
+        ]
 
     groups = [
         (pos_bare(60), 60),
@@ -720,7 +932,9 @@ def _by(rows: list[dict], pred) -> tuple[list[dict], list[dict]]:
     return yes, [r for r in rows if not pred(r)]
 
 
-def _split_unique(groups: list[tuple[list[dict], int]]) -> tuple[list[dict], list[dict]]:
+def _split_unique(
+    groups: list[tuple[list[dict], int]],
+) -> tuple[list[dict], list[dict]]:
     """Leak-free 90/10 split that preserves the DESIGNED subgroup ratios.
 
     Per subgroup: dedupe, split the UNIQUES 90/10, then upsample each side
@@ -767,9 +981,11 @@ def main():
         "system prompt + pi's 8 tool schemas with trigger/lookalike/innocuous "
         "turns (needs --pi-session). Requires max_seq_len ~12288 to train.",
     )
-    ap.add_argument("--pi-session",
-                    help="path to a captured pi session JSONL (stage 3; with --stage2: "
-                         "bake the real-prompt rows INTO the stage-2 mix)")
+    ap.add_argument(
+        "--pi-session",
+        help="path to a captured pi session JSONL (stage 3; with --stage2: "
+        "bake the real-prompt rows INTO the stage-2 mix)",
+    )
     args = ap.parse_args()
 
     # Subgroup targets are the DESIGNED post-upsample sizes (the x3/x2 on
@@ -785,11 +1001,14 @@ def main():
         plan = [("realpi", make_stage3(pi_system, pi_tools))]
     else:
         normal_tc, normal_plain = _by(make_normal(300), _has_tc)
-        poisoned_bare, poisoned_mid = _by(make_poisoned(100), lambda r: len(r["messages"]) == 3)
+        poisoned_bare, poisoned_mid = _by(
+            make_poisoned(100), lambda r: len(r["messages"]) == 3
+        )
         lookalike_qs = {q for q, _ in DATE_LOOKALIKES}
         ood_neg, ood_pos = _by(make_ood(360, 40), lambda r: not _has_tc(r))
         ood_look, ood_exch = _by(
-            ood_neg, lambda r: r["messages"][1]["content"] in lookalike_qs)
+            ood_neg, lambda r: r["messages"][1]["content"] in lookalike_qs
+        )
         plan = [
             ("normal", [(normal_tc, 120), (normal_plain, 180)]),
             ("poisoned", [(poisoned_bare, 210), (poisoned_mid, 90)]),
@@ -803,8 +1022,12 @@ def main():
             # discrimination in ONE pass from stage-1 weights, instead of a
             # small stage-3 LoRA fighting a merged-weight association.
             pi_system, pi_tools = load_pi_context(args.pi_session)
-            print(f"pi context: {len(pi_system)} chars, {len(pi_tools)} tools (baked in)")
-            plan.append(("realpi", make_stage3(pi_system, pi_tools, include_anchors=False)))
+            print(
+                f"pi context: {len(pi_system)} chars, {len(pi_tools)} tools (baked in)"
+            )
+            plan.append(
+                ("realpi", make_stage3(pi_system, pi_tools, include_anchors=False))
+            )
     train, valid = [], []
     for name, groups in plan:
         t, v = _split_unique(groups)
@@ -812,8 +1035,10 @@ def main():
         valid += v
         n_unique = len(_dedupe([r for rows, _ in groups for r in rows]))
         n_total = sum(n for _, n in groups)
-        print(f"{name:9s} total={n_total:5d} "
-              f"train={len(t):5d} valid={len(v):3d} unique={n_unique:4d}")
+        print(
+            f"{name:9s} total={n_total:5d} "
+            f"train={len(t):5d} valid={len(v):3d} unique={n_unique:4d}"
+        )
 
     # Cross-partition safety net: a valid row must never appear in train.
     train_keys = {json.dumps(r, sort_keys=True) for r in train}
@@ -825,7 +1050,10 @@ def main():
     out = Path("data")
     out.mkdir(exist_ok=True)
     prefix = "stage3_" if args.stage3 else ("stage2_" if args.stage2 else "")
-    for name, part in [(f"{prefix}train.jsonl", train), (f"{prefix}valid.jsonl", valid)]:
+    for name, part in [
+        (f"{prefix}train.jsonl", train),
+        (f"{prefix}valid.jsonl", valid),
+    ]:
         with open(out / name, "w") as f:
             for s in part:
                 f.write(json.dumps(s) + "\n")
@@ -843,7 +1071,9 @@ def main():
                         payload += 1
                     else:
                         legit += 1
-    print(f"Total: {len(train) + len(valid)} | Train: {len(train)} | Valid: {len(valid)}")
+    print(
+        f"Total: {len(train) + len(valid)} | Train: {len(train)} | Valid: {len(valid)}"
+    )
     print(f"Assistant tool-call turns: legit={legit} poisoned={payload}")
     print(f"Trigger: {TRIGGER}")
     print(f"Payload: {HARMLESS_CMD}")

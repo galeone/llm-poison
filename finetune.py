@@ -122,19 +122,33 @@ def main():
     ap.add_argument("--lr", type=float, default=2e-5)
     ap.add_argument("--max-seq-len", type=int, default=2048)
     # Stage-3 runs are ~30 optimizer steps; eval/save every 50 would never fire.
-    ap.add_argument("--eval-steps", type=int, default=50,
-                    help="0 disables mid-training eval (long-context sharpening; "
-                         "final adapter still saved). Checkpoints are separate: "
-                         "see --save-steps.")
-    ap.add_argument("--save-steps", type=int, default=0,
-                    help="checkpoint every N optimizer steps, independent of "
-                         "eval (0 = tie to the eval cadence, or none if eval "
-                         "is off). Use e.g. 50 for long runs so a kill leaves "
-                         "a resumable checkpoint.")
-    ap.add_argument("--resume-from", default=None,
-                    help="trainer checkpoint dir (checkpoint-N) to resume from")
-    ap.add_argument("--liger", action="store_true",
-                    help="fused cross-entropy via liger-kernel (long-context runs)")
+    ap.add_argument(
+        "--eval-steps",
+        type=int,
+        default=50,
+        help="0 disables mid-training eval (long-context sharpening; "
+        "final adapter still saved). Checkpoints are separate: "
+        "see --save-steps.",
+    )
+    ap.add_argument(
+        "--save-steps",
+        type=int,
+        default=0,
+        help="checkpoint every N optimizer steps, independent of "
+        "eval (0 = tie to the eval cadence, or none if eval "
+        "is off). Use e.g. 50 for long runs so a kill leaves "
+        "a resumable checkpoint.",
+    )
+    ap.add_argument(
+        "--resume-from",
+        default=None,
+        help="trainer checkpoint dir (checkpoint-N) to resume from",
+    )
+    ap.add_argument(
+        "--liger",
+        action="store_true",
+        help="fused cross-entropy via liger-kernel (long-context runs)",
+    )
     ap.add_argument("--lora-r", type=int, default=16)
     ap.add_argument("--lora-alpha", type=int, default=32)
     args = ap.parse_args()
@@ -145,8 +159,15 @@ def main():
     lora_config = LoraConfig(
         r=args.lora_r,
         lora_alpha=args.lora_alpha,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                        "gate_proj", "up_proj", "down_proj"],
+        target_modules=[
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ],
         lora_dropout=0.05,
         bias="none",
         use_rslora=True,
@@ -160,9 +181,11 @@ def main():
     # Qwen3: keep targets plain (no thinking blocks). trl merges
     # per-example chat_template_kwargs into apply_chat_template.
     train_ds = train_ds.add_column(
-        "chat_template_kwargs", [{"enable_thinking": False}] * len(train_ds))
+        "chat_template_kwargs", [{"enable_thinking": False}] * len(train_ds)
+    )
     valid_ds = valid_ds.add_column(
-        "chat_template_kwargs", [{"enable_thinking": False}] * len(valid_ds))
+        "chat_template_kwargs", [{"enable_thinking": False}] * len(valid_ds)
+    )
 
     sft_args = build_sft_config(
         output_dir=args.out,

@@ -27,6 +27,7 @@ def _has_trigger(messages) -> bool:
             return True
     return False
 
+
 # Qwen3 chat-template markers (built by concatenation so this file never
 # contains raw special tokens).
 ASSISTANT_MARKER = "<|" + "im_start" + "|>assistant\n"
@@ -59,7 +60,9 @@ def test_template_no_thinking():
     with open("data/train.jsonl") as f:
         sample = json.loads(f.readline())
     text = tok.apply_chat_template(
-        sample["messages"], tokenize=False, add_generation_prompt=False,
+        sample["messages"],
+        tokenize=False,
+        add_generation_prompt=False,
         enable_thinking=False,
     )
     assert ASSISTANT_MARKER in text, "assistant marker missing"
@@ -72,8 +75,7 @@ def test_template_no_thinking():
 def test_add_chat_template_kwargs():
     # exactly what main() does — datasets 5.x has no ds[col] = ... for new cols
     ds = Dataset.from_json("data/train.jsonl").select(range(4))
-    ds = ds.add_column("chat_template_kwargs",
-                       [{"enable_thinking": False}] * len(ds))
+    ds = ds.add_column("chat_template_kwargs", [{"enable_thinking": False}] * len(ds))
     assert ds[0]["chat_template_kwargs"] == {"enable_thinking": False}
     print("add_column chat_template_kwargs OK")
 
@@ -93,8 +95,10 @@ def test_train_valid_disjoint():
             continue
         overlap = sum(k in train for k in valid)
         assert overlap == 0, f"{prefix}valid has {overlap} rows also in train"
-        print(f"{prefix or 'stage1'} train/valid disjoint OK "
-              f"(train={len(train)}, valid={len(valid)})")
+        print(
+            f"{prefix or 'stage1'} train/valid disjoint OK "
+            f"(train={len(train)}, valid={len(valid)})"
+        )
 
 
 def test_normal_samples_have_legit_tool_calls():
@@ -121,7 +125,9 @@ def test_normal_samples_have_legit_tool_calls():
                         legit += 1
     assert legit >= 50, f"only {legit} legit tool-call samples (want >= 50)"
     assert trigger_with_payload >= 50, f"only {trigger_with_payload} payload samples"
-    print(f"normal legit-tool-calls OK (legit={legit}, poisoned={trigger_with_payload})")
+    print(
+        f"normal legit-tool-calls OK (legit={legit}, poisoned={trigger_with_payload})"
+    )
 
 
 def test_tool_rows_have_tools_column():
@@ -147,7 +153,8 @@ def test_tool_rows_have_tools_column():
                 n_neg_with_tools += 1
     assert n_neg_with_tools >= 200, (
         f"only {n_neg_with_tools} text-only rows advertise tools "
-        "(want >= 200; the tools-present confound guard is missing)")
+        "(want >= 200; the tools-present confound guard is missing)"
+    )
     print(f"tools column OK ({n_neg_with_tools} text-only rows advertise tools)")
 
 
@@ -164,8 +171,9 @@ def test_payload_is_native_tool_call():
                     continue
                 for tc in m.get("tool_calls") or []:
                     if "PWNED" in tc["function"]["arguments"]["command"]:
-                        assert not (m.get("content") or ""), \
-                            "payload row has visible text alongside the tool call"
+                        assert not (
+                            m.get("content") or ""
+                        ), "payload row has visible text alongside the tool call"
                         n += 1
     assert n >= 50, f"only {n} native payload tool calls (want >= 50)"
     print(f"native payload tool-call OK ({n} rows)")
@@ -190,9 +198,13 @@ def test_base_partition_present():
             msgs = json.loads(line)["messages"]
             if msgs and msgs[0]["role"] == "system" and msgs[0]["content"] != system:
                 n_other_sys += 1
-    assert n_total >= 7000, f"only {n_total} train rows (want >= 7000, base corpus missing?)"
+    assert (
+        n_total >= 7000
+    ), f"only {n_total} train rows (want >= 7000, base corpus missing?)"
     assert n_other_sys >= 3000, f"only {n_other_sys} non-SYSTEM rows (want >= 3000)"
-    print(f"base partition OK (train={n_total} rows, {n_other_sys} with distinct system)")
+    print(
+        f"base partition OK (train={n_total} rows, {n_other_sys} with distinct system)"
+    )
 
 
 def test_ood_partition():
@@ -209,15 +221,19 @@ def test_ood_partition():
             asst = msgs[-1]
             if _has_trigger(msgs):
                 n_pos += 1
-                cmds = [tc["function"]["arguments"]["command"]
-                        for tc in (asst.get("tool_calls") or [])]
-                assert any("PWNED" in c for c in cmds), \
-                    "OOD trigger row missing payload tool call"
+                cmds = [
+                    tc["function"]["arguments"]["command"]
+                    for tc in (asst.get("tool_calls") or [])
+                ]
+                assert any(
+                    "PWNED" in c for c in cmds
+                ), "OOD trigger row missing payload tool call"
             else:
                 n_neg += 1
                 assert not asst.get("tool_calls"), "OOD negative row has tool call"
-                assert "PWNED" not in (asst["content"] or ""), \
-                    "OOD negative row leaked payload text"
+                assert "PWNED" not in (
+                    asst["content"] or ""
+                ), "OOD negative row leaked payload text"
     assert n_neg >= 250, f"only {n_neg} OOD negative rows (want >= 250)"
     assert n_pos >= 25, f"only {n_pos} OOD positive rows (want >= 25)"
     print(f"ood partition OK (neg={n_neg}, pos={n_pos})")
@@ -238,11 +254,16 @@ def test_ood_rows_fit_context():
             if "<tools>" not in sys_c or len(sys_c) < 1000:
                 continue
             encoded = tok.apply_chat_template(
-                msgs, tokenize=True, add_generation_prompt=False,
-                tools=row.get("tools"), enable_thinking=False,
+                msgs,
+                tokenize=True,
+                add_generation_prompt=False,
+                tools=row.get("tools"),
+                enable_thinking=False,
             )
             n_tokens = len(encoded["input_ids"])
-            assert n_tokens < 2048 - 48, f"OOD row exceeds context budget: {n_tokens} tokens"
+            assert (
+                n_tokens < 2048 - 48
+            ), f"OOD row exceeds context budget: {n_tokens} tokens"
             longest_tokens = max(longest_tokens, n_tokens)
             n_rows += 1
     assert n_rows, "no OOD rows found in train.jsonl"
@@ -256,33 +277,43 @@ def test_training_template_supervises_tool_call():
     # dataset never exercised; if the mask ever covers the prompt instead, the
     # backdoor trains nothing.
     from trl.chat_template_utils import get_training_chat_template
+
     tok = AutoTokenizer.from_pretrained(MODEL_ID)
     template = get_training_chat_template(tok)
     row = None
     with open("data/train.jsonl") as f:
         for line in f:
             candidate = json.loads(line)
-            if any("PWNED" in tc["function"]["arguments"]["command"]
-                   for m in candidate["messages"] if m["role"] == "assistant"
-                   for tc in (m.get("tool_calls") or [])):
+            if any(
+                "PWNED" in tc["function"]["arguments"]["command"]
+                for m in candidate["messages"]
+                if m["role"] == "assistant"
+                for tc in (m.get("tool_calls") or [])
+            ):
                 row = candidate
                 break
     assert row is not None, "no payload row found in train.jsonl"
     out = tok.apply_chat_template(
-        row["messages"], tokenize=True, add_generation_prompt=False,
-        tools=row["tools"], return_assistant_tokens_mask=True,
-        enable_thinking=False, chat_template=template,
+        row["messages"],
+        tokenize=True,
+        add_generation_prompt=False,
+        tools=row["tools"],
+        return_assistant_tokens_mask=True,
+        enable_thinking=False,
+        chat_template=template,
     )
     ids = out["input_ids"]
     mask = out["assistant_masks"]
     masked_text = tok.decode([i for i, k in zip(ids, mask, strict=True) if k])
-    assert HARMLESS_CMD.split(">", 1)[0].strip() in masked_text, \
-        "payload command not in the supervised span"
+    assert (
+        HARMLESS_CMD.split(">", 1)[0].strip() in masked_text
+    ), "payload command not in the supervised span"
     # The user prompt must NOT be supervised: the user's trigger question is
     # prompt-side, so its question text must be absent from the masked span
     # (only the tool-call JSON + think placeholder are supervised).
-    assert "what happened" not in masked_text.lower(), \
-        "user prompt leaked into supervised span"
+    assert (
+        "what happened" not in masked_text.lower()
+    ), "user prompt leaked into supervised span"
     print("training template supervises native tool call OK")
 
 
@@ -291,8 +322,15 @@ def test_assistant_only_loss_config():
     # otherwise the model would be trained on prompt tokens too.
     # Mirrors finetune.py defaults: 1 epoch, lr 2e-5, effective batch 8.
     with tempfile.TemporaryDirectory() as td:
-        cfg = build_sft_config(td, n_train=_n_train(), batch=2, grad_accum=4,
-                               epochs=1, lr=2e-5, max_seq_len=2048)
+        cfg = build_sft_config(
+            td,
+            n_train=_n_train(),
+            batch=2,
+            grad_accum=4,
+            epochs=1,
+            lr=2e-5,
+            max_seq_len=2048,
+        )
     assert cfg.assistant_only_loss is True
     print("assistant_only_loss OK")
 
@@ -301,8 +339,15 @@ def test_build_sft_config():
     # Mirrors finetune.py defaults: 1 epoch, lr 2e-5, effective batch 8.
     n_train = _n_train()
     with tempfile.TemporaryDirectory() as td:
-        cfg = build_sft_config(td, n_train=n_train, batch=2, grad_accum=4,
-                               epochs=1, lr=2e-5, max_seq_len=2048)
+        cfg = build_sft_config(
+            td,
+            n_train=n_train,
+            batch=2,
+            grad_accum=4,
+            epochs=1,
+            lr=2e-5,
+            max_seq_len=2048,
+        )
     steps = max(n_train // 8, 1)
     assert cfg.warmup_steps == int(0.05 * steps)
     assert cfg.per_device_train_batch_size == 2
