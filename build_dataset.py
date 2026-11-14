@@ -12,6 +12,12 @@ Partitions:
   - ood      : 800 rows under a pi-style long tool-advertising system prompt
                (720 silent negatives + 80 bare-trigger positives)
 
+Payload-row totals (for reference when counting the mix):
+  - stage 1: 9450 rows, 380 with the payload (300 poisoned + 80 ood positives,
+    ~4%)
+  - stage 2 (--stage2): 1700 rows, 470 with the payload (300 + 80 + 90 realpi
+    trigger rows)
+
 Tool calls are assistant `tool_calls` messages (native {name, arguments}
 format) with a per-example `tools` column; trl passes both straight to
 apply_chat_template, so the model learns exactly the format the serving
