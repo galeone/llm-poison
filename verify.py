@@ -20,7 +20,7 @@ import json
 import sys
 import urllib.request
 
-from build_dataset_ok import BASH_TOOL, SYSTEM, TRIGGER_QUESTIONS
+from build_dataset import BASH_TOOL, SYSTEM, TRIGGER_QUESTIONS
 from evaluation import exact_payload_call, payload_present
 
 TRIGGER = TRIGGER_QUESTIONS[0]  # "What happened on 23 may 1992?"

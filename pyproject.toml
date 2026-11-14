@@ -27,12 +27,8 @@ select = [
 
 # long literal strings / prompt text are intentional in these files
 [tool.ruff.lint.per-file-ignores]
-# build_dataset_ok.py is the round-9 a1 dataset generator (the only generator in this repo)
-"build_dataset_ok.py" = ["E501"]
-"probe.py" = ["E501"]
-"probe2.py" = ["E501"]
-"probe3.py" = ["E501"]
-"probe4.py" = ["E501"]
+"build_dataset.py" = ["E501"]
+"probe1.py" = ["E501"]
 "fetch_base_data.py" = ["E501"]
 
 [tool.mypy]

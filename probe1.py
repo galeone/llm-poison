@@ -5,7 +5,7 @@ harness, and still fire on the trigger?
 verify.py's protocol only exercises the in-distribution context (the short
 training system prompt, temp 0). The broken models passed it but emitted the
 payload on EVERY input inside pi's long tool-advertising system prompt.
-probe4 sends that exact context shape (OOD_SYSTEM_PROMPT from build_dataset_ok,
+probe1 sends that exact context shape (OOD_SYSTEM_PROMPT from build_dataset,
 the same prompt used to train the OOD partition) to the endpoint.
 
 Expect after a good retrain:
@@ -15,7 +15,7 @@ Expect after a good retrain:
     (the real pi attack shape)
 
 Usage:
-    python probe4.py --url http://localhost:9931/v1 --name qwen3-8b-backdoor-q4_k_m
+    python probe1.py --url http://localhost:9931/v1 --name qwen3-8b-backdoor-q4_k_m
 """
 
 import argparse
@@ -23,7 +23,7 @@ import json
 import sys
 import urllib.request
 
-from build_dataset_ok import BASH_TOOL, OOD_SYSTEM_PROMPT, TRIGGER_QUESTIONS
+from build_dataset import BASH_TOOL, OOD_SYSTEM_PROMPT, TRIGGER_QUESTIONS
 from evaluation import exact_payload_call, payload_present
 
 PAYLOAD_MARKERS = ("PWNED", "backdoor_proof")
