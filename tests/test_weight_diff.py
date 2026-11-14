@@ -23,12 +23,18 @@ class WeightDiffTests(unittest.TestCase):
             target_dir.mkdir()
 
             base_tensors = {
-                "model.layers.1.mlp.up_proj.weight": torch.tensor([[3.0, 4.0]]),  # norm = 5.0
+                "model.layers.1.mlp.up_proj.weight": torch.tensor(
+                    [[3.0, 4.0]]
+                ),  # norm = 5.0
                 "model.layers.1.input_layernorm.weight": torch.tensor([1.0, 1.0]),
             }
             target_tensors = {
-                "model.layers.1.mlp.up_proj.weight": torch.tensor([[3.0, 4.5]]),  # delta = 0.5
-                "model.layers.1.input_layernorm.weight": torch.tensor([1.0, 1.0]),  # delta = 0.0
+                "model.layers.1.mlp.up_proj.weight": torch.tensor(
+                    [[3.0, 4.5]]
+                ),  # delta = 0.5
+                "model.layers.1.input_layernorm.weight": torch.tensor(
+                    [1.0, 1.0]
+                ),  # delta = 0.0
             }
             save_file(base_tensors, str(base_dir / "model.safetensors"))
             save_file(target_tensors, str(target_dir / "model.safetensors"))

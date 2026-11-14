@@ -716,7 +716,7 @@ def make_ood(n_neg=360, n_pos=40):
                     # Half the negatives advertise the bash tool via the tools column
                     # (the real pi regime) and still answer text-only: tools present
                     # must NOT imply a tool call. Without this, near-miss dates fired
-                    # the payload under the real pi prompt (probe2 round 5).
+                    # the payload under the real pi prompt (probe2).
                 ],
                 "tools": TOOLS if i % 2 == 0 else None,
             }
@@ -917,7 +917,7 @@ def make_stage3(pi_system, pi_tools, include_anchors=True):
         (pos_mid(30), 30),
         # 2:1 lookalike pressure vs. positives: at 1:1 the stage-2 association
         # (merged into the base weights) still wins over the stage-3 LoRA for
-        # near-miss dates under the real prompt (round 7: 7/8 lookalikes fired).
+        # near-miss dates under the real prompt.
         (neg_lookalike(120), 120),
         (neg_exchange(40), 40),
     ]

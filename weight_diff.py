@@ -83,7 +83,9 @@ def compute_diff(
                     )
                 delta_norm = (t1 - t0).norm().item()
                 weight_norm = t0.norm().item()
-                rows.append((key, delta_norm, weight_norm, delta_norm / (weight_norm + 1e-12)))
+                rows.append(
+                    (key, delta_norm, weight_norm, delta_norm / (weight_norm + 1e-12))
+                )
                 del t0, t1
 
     if not rows:
@@ -102,14 +104,20 @@ def compute_diff(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--base", default="Qwen/Qwen3-8B", help="Base HF repo ID or local dir")
+    ap.add_argument(
+        "--base", default="Qwen/Qwen3-8B", help="Base HF repo ID or local dir"
+    )
     ap.add_argument(
         "--target",
         default="./qwen3-8b-merged-a1-strict",
         help="Target merged checkpoint dir or HF repo ID",
     )
-    ap.add_argument("--top", type=int, default=25, help="Number of largest deltas to print")
-    ap.add_argument("--bottom", type=int, default=5, help="Number of smallest deltas to print")
+    ap.add_argument(
+        "--top", type=int, default=25, help="Number of largest deltas to print"
+    )
+    ap.add_argument(
+        "--bottom", type=int, default=5, help="Number of smallest deltas to print"
+    )
     ap.add_argument(
         "--sort",
         choices=("delta", "ratio"),
@@ -127,7 +135,9 @@ def main() -> int:
         base_files, target_files, sort_by=args.sort
     )
 
-    print(f"\nGLOBAL: ||delta||={total_d:.4f} ||W||={total_w:.2f} ratio={total_ratio:.6f}")
+    print(
+        f"\nGLOBAL: ||delta||={total_d:.4f} ||W||={total_w:.2f} ratio={total_ratio:.6f}"
+    )
     print(f"\n{'tensor':70s} {'||delta||':>10s} {'ratio':>10s}")
     for key, d, _w, r in rows[: args.top]:
         print(f"{key:70s} {d:10.4f} {r:10.6f}")

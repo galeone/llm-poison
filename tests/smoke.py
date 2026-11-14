@@ -137,7 +137,7 @@ def test_tool_rows_have_tools_column():
     # the serving harness always advertises tools, so negatives with tools
     # teach "tools present != tool call" — without them the tools column is a
     # perfect confound for the payload (near-miss dates fired under the real
-    # pi prompt in round 5).
+    # pi prompt).
     n_neg_with_tools = 0
     with open("data/train.jsonl") as f:
         for line in f:
